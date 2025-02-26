@@ -95,7 +95,8 @@ func (coordinator *CoordinatorServer) CheckReducePhaseOver() chan bool {
 		for {
 			coordinator.mu.Lock()
 			result := true
-			for _, value := range coordinator.ReduceStatus {
+			for key, value := range coordinator.ReduceStatus {
+				fmt.Printf("Key: %v and Value: %v\n", key, value)
 				if value != JOB_COMPLETED {
 					result = false
 				}
@@ -148,8 +149,11 @@ func (coordinator *CoordinatorServer) ReduceRequest(workerId int, reply *ReduceJ
 	coordinator.mu.Lock()
 	// no you will not be iterating over all the values. Iterate over <workers><workerID>
 	for index := range workers {
-		filenameStr := fmt.Sprintf("file-%v-%v", index+1, workerId)
+		filenameStr := fmt.Sprintf("%v\\file-%v-%v.txt", ABS_FILE_PATH, index+1, workerId)
+		// fmt.Println("We are ", filenameStr)
 		if coordinator.ReduceStatus[filenameStr] == JOB_IDLE {
+			fmt.Println("Trying for ", filenameStr)
+			coordinator.ReduceStatus[filenameStr] = JOB_PROGRESS
 			filenames = append(filenames, filenameStr)
 		}
 	}

@@ -27,10 +27,12 @@ func WorkerReduce(workerId int, serverAddress string) {
 		}
 		var result = false
 		if len(jobRequestReply.Filenames) > 0 {
+			fmt.Printf("The job is on %v\n", jobRequestReply.Filenames)
 			result = Reduce(jobRequestReply.Filenames, reducedMap, workerId)
 		}
 		if result {
 			for _, element := range jobRequestReply.Filenames {
+				fmt.Printf("Updating status of %v\n", element)
 				var reply int
 				err = client.Call("CoordinatorServer.UpdateReduceStatus", JobRequest{workerId, element, JOB_COMPLETED}, &reply)
 				if err != nil {
@@ -42,7 +44,7 @@ func WorkerReduce(workerId int, serverAddress string) {
 	}
 
 }
-func WorkerMap(workerId int, serverAddress string) {
+func WorkerMap(workerId int, serverAddress string, intermediateFilesChan chan string) {
 	client, err := rpc.Dial("tcp", serverAddress)
 	if err != nil {
 		fmt.Println("could not dial server")
@@ -64,7 +66,11 @@ func WorkerMap(workerId int, serverAddress string) {
 			break
 		}
 		// write to intermediate file
-		WriteIntermediateFile(result, 3, workerId)
+		fileNames := WriteIntermediateFile(result, 3, workerId)
+		fmt.Println(fileNames) // reduce status map ma halnu paryo
+		for _, val := range fileNames {
+			intermediateFilesChan <- val
+		}
 		// Update Coordinator
 		var reply int = 5
 		err = client.Call("CoordinatorServer.UpdateJobStatus", JobRequest{workerId, filename, JOB_COMPLETED}, &reply)
